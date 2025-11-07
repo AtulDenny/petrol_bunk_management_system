@@ -1,8 +1,6 @@
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Use process.cwd() to robustly point to the project root in hosted builds
+const PROJECT_ROOT = process.cwd();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -25,7 +23,7 @@ const nextConfig = {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
-      "@": __dirname,
+      "@": PROJECT_ROOT,
     };
     return config;
   },
