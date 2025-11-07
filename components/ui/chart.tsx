@@ -4,7 +4,7 @@ import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 import { BarChart as TremorBarChart } from "@tremor/react";
 import { LineChart as TremorLineChart } from "@tremor/react";
-import { LineChart as TremorPieChart } from "@tremor/react";
+import { DonutChart as TremorPieChart } from "@tremor/react";
 import { cn } from "@/lib/utils";
 
 // Format: { THEME_NAME: CSS_SELECTOR }
@@ -416,7 +416,7 @@ export function CustomPieChart({
     <TremorPieChart
       data={data}
       index={index}
-      categories={category}
+      category={category}
       colors={colors}
       valueFormatter={valueFormatter}
       className={className}

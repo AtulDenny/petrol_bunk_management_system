@@ -48,8 +48,8 @@ export async function POST(request: Request) {
       expiresIn: "7d",
     });
 
-    // Set cookie
-    const cookieStore = cookies();
+    // Set cookie (Next.js 15 requires awaiting cookies() in route handlers)
+    const cookieStore = await cookies();
     cookieStore.set({
       name: "auth_token",
       value: token,

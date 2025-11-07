@@ -32,7 +32,8 @@ export async function GET(request: Request) {
     // Data for charts
     const salesByMonth: { [key: string]: number } = {};
     const volumeByMonth: { [key: string]: number } = {};
-    const fuelDistribution: { [key: string]: number } = {
+    // Track distribution by total volume per fuel type for accurate percentages
+    const fuelDistributionVolume: { [key: string]: number } = {
       Petrol: 0,
       Diesel: 0,
       Premium: 0,
@@ -88,14 +89,15 @@ export async function GET(request: Request) {
             }
           }
 
-          // Determine fuel type based on nozzle number (simplified logic)
+          // Determine fuel type based on nozzle number (simplified mapping)
           const nozzleNum = Number.parseInt(nozzle.nozzle, 10) || 0;
+          const vol = Number.parseFloat(nozzle.v) || 0;
           if (nozzleNum === 1) {
-            fuelDistribution["Petrol"] += 1;
+            fuelDistributionVolume["Petrol"] += vol;
           } else if (nozzleNum === 2) {
-            fuelDistribution["Diesel"] += 1;
+            fuelDistributionVolume["Diesel"] += vol;
           } else {
-            fuelDistribution["Premium"] += 1;
+            fuelDistributionVolume["Premium"] += vol;
           }
         });
       }
@@ -111,10 +113,15 @@ export async function GET(request: Request) {
     const volumeChartData = Object.entries(volumeByMonth).map(
       ([name, volume]) => ({ name, volume })
     );
-    const fuelTypeData = Object.entries(fuelDistribution).map(
+    // Convert volume totals to percentage of total volume across all types
+    const totalVolumeForDistribution = Object.values(fuelDistributionVolume).reduce(
+      (sum, v) => sum + v,
+      0
+    );
+    const fuelTypeData = Object.entries(fuelDistributionVolume).map(
       ([name, value]) => ({
         name,
-        value: (value / transactions) * 100, // Convert to percentage
+        value: totalVolumeForDistribution > 0 ? (value / totalVolumeForDistribution) * 100 : 0,
       })
     );
 

@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: petrol-bunk-management
+    env: node
+    plan: free
+    branch: main
+    buildCommand: npm ci --legacy-peer-deps && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: USE_NODE_OCR
+        value: "true"
+

@@ -213,6 +213,23 @@ docker run -p 3000:3000 petrol-pump-management
 ```
 
 ### Manual Deployment
+### Render.com (1-click Blueprint)
+
+1. Ensure your changes are pushed to GitHub (branch `main`).
+2. Create a MongoDB Atlas cluster and get the connection string.
+3. In the repo root we ship `render.yaml`. On Render:
+   - New → Blueprint → "Use a public Git repository" → paste your repo URL.
+   - Review the service and click "Apply".
+   - Set environment variables in the Render dashboard:
+     - `MONGODB_URI` = your Mongo connection string
+     - `JWT_SECRET` = a strong random string
+     - `USE_NODE_OCR` = `true` (uses tesseract.js, no Python needed)
+   - Click "Deploy".
+
+Notes:
+- We set `output: 'standalone'` for efficient Next.js deployment.
+- File uploads are stored under `public/uploads` and are ephemeral on Render (reset on deploy). For persistence, use S3-compatible storage and update the upload route accordingly.
+
 ```bash
 # Build for production
 npm run build
