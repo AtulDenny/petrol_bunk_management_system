@@ -6,6 +6,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    tsconfigPaths: true,
+  },
   output: 'standalone',
   images: {
     unoptimized: true,
