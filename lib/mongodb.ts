@@ -4,7 +4,17 @@ let cachedClient: MongoClient | null = null;
 let cachedDbs: Map<string, Db> = new Map();
 
 function getMongoUri(): string {
-	const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/petrol-pump-management";
+	let uri = process.env.MONGODB_URI || "mongodb://localhost:27017/petrol-pump-management";
+	// For some Windows environments with TLS interception, allow opting-in to invalid certs via env flag
+	if (process.env.MONGODB_TLS_INSECURE === "true") {
+		if (uri.includes("?")) {
+			if (!/([?&])tlsAllowInvalidCertificates=/.test(uri)) {
+				uri += "&tlsAllowInvalidCertificates=true";
+			}
+		} else {
+			uri += "?tlsAllowInvalidCertificates=true";
+		}
+	}
 	return uri;
 }
 
