@@ -40,10 +40,9 @@ export async function GET(request: Request) {
     // Process previous receipt
     const previous = processReceipt(previousReceipt);
 
-    // Calculate differences
+    // Calculate differences (current - previous)
     const salesDiff = current.totalSales - previous.totalSales;
-    // Use Math.abs to ensure we get a positive value for volume sold
-    const volumeDiff = Math.abs(previous.totalVolume - current.totalVolume);
+    const volumeDiff = current.totalVolume - previous.totalVolume;
     
     const salesPercentChange = previous.totalSales > 0 
       ? (salesDiff / previous.totalSales) * 100 

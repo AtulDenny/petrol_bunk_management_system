@@ -11,7 +11,26 @@ Usage:
 import sys
 import os
 import json
-from lib.receipt_processor import process_receipt
+
+# Add the project root to the path so we can import from lib
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from lib.receipt_processor import process_receipt
+except ImportError:
+    # Fallback: if import fails, try running as script
+    import subprocess
+    def process_receipt(image_path):
+        script_path = os.path.join(os.path.dirname(__file__), "lib", "receipt_processor.py")
+        result = subprocess.run(
+            [sys.executable, script_path, image_path],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        else:
+            return {"error": result.stderr or "Processing failed"}
 
 def main():
     if len(sys.argv) < 2:

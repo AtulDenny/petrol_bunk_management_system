@@ -218,7 +218,7 @@ export default function DailyComparisonPage() {
     const previousVolume = previousNozzle?.volume || 0;
     
     const salesDiff = currentSales - previousSales;
-    const volumeDiff = Math.abs(previousVolume - currentVolume);
+    const volumeDiff = currentVolume - previousVolume;
     
     const salesPercentChange = previousSales > 0 
       ? (salesDiff / previousSales) * 100 
@@ -295,17 +295,18 @@ export default function DailyComparisonPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-400">Today&apos;s Sales</p>
+                <p className="text-sm font-medium text-gray-400">Current Sales</p>
                 <h3 className="text-2xl font-bold text-white mt-1">
-                  {formatCurrency(comparisonData.difference.sales)}
+                  {formatCurrency(comparisonData.current.totalSales)}
                 </h3>
-                <p className={`text-sm flex items-center mt-1 ${comparisonData.difference.salesPercentChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {comparisonData.difference.salesPercentChange >= 0 ? (
+                <p className={`text-sm flex items-center mt-1 ${comparisonData.difference.sales >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {comparisonData.difference.sales >= 0 ? (
                     <ArrowUpRight className="h-4 w-4 mr-1" />
                   ) : (
                     <ArrowDownRight className="h-4 w-4 mr-1" />
                   )}
-                  {Math.abs(comparisonData.difference.salesPercentChange).toFixed(1)}%
+                  {comparisonData.difference.sales >= 0 ? '+' : ''}{formatCurrency(comparisonData.difference.sales)} 
+                  ({comparisonData.difference.salesPercentChange >= 0 ? '+' : ''}{comparisonData.difference.salesPercentChange.toFixed(1)}%)
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-amber-500/20 flex items-center justify-center">
@@ -319,17 +320,18 @@ export default function DailyComparisonPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-400">Today&apos;s Volume</p>
+                <p className="text-sm font-medium text-gray-400">Current Volume</p>
                 <h3 className="text-2xl font-bold text-white mt-1">
-                  {comparisonData.difference.volume.toLocaleString()} L
+                  {comparisonData.current.totalVolume.toLocaleString()} L
                 </h3>
-                <p className={`text-sm flex items-center mt-1 ${comparisonData.difference.volumePercentChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {comparisonData.difference.volumePercentChange >= 0 ? (
+                <p className={`text-sm flex items-center mt-1 ${comparisonData.difference.volume >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {comparisonData.difference.volume >= 0 ? (
                     <ArrowUpRight className="h-4 w-4 mr-1" />
                   ) : (
                     <ArrowDownRight className="h-4 w-4 mr-1" />
                   )}
-                  {Math.abs(comparisonData.difference.volumePercentChange).toFixed(1)}%
+                  {comparisonData.difference.volume >= 0 ? '+' : ''}{comparisonData.difference.volume.toLocaleString()} L
+                  ({comparisonData.difference.volumePercentChange >= 0 ? '+' : ''}{comparisonData.difference.volumePercentChange.toFixed(1)}%)
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center">

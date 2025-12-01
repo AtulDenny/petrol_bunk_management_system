@@ -141,47 +141,71 @@ export async function POST(request: Request) {
 
     // Process receipt using Python script; on failure, fallback to Node OCR (tesseract.js)
     let ocrData: any;
+    let pythonError: any = null;
+    
     try {
       // Get absolute path to script
       const scriptPath = resolve(join(process.cwd(), "lib", "receipt_processor.py"));
+      console.log(`Processing receipt: ${filePath}`);
       console.log(`Python script path: ${scriptPath}`);
       console.log(`Python executable: ${PYTHON_EXECUTABLE}`);
+      
+      // Check if script exists
+      if (!fs.existsSync(scriptPath)) {
+        throw new Error(`Python OCR script not found at: ${scriptPath}`);
+      }
       
       const command = `${PYTHON_EXECUTABLE} "${scriptPath}" "${filePath}"`;
       console.log(`Executing command: ${command}`);
       
-      const { stdout, stderr } = await execPromise(command);
+      const { stdout, stderr } = await execPromise(command, {
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large outputs
+        timeout: 60000 // 60 second timeout
+      });
       
-      if (stderr) {
-        console.error("Python script stderr output:", stderr);
+      if (stderr && !stderr.includes("Warning")) {
+        console.warn("Python script stderr output:", stderr);
       }
       
       if (stdout && stdout.trim()) {
         console.log("Python script stdout length:", stdout.length);
-        console.log("Python script stdout preview:", stdout.substring(0, 200) + "...");
+        console.log("Python script stdout preview:", stdout.substring(0, 500));
         
         try {
           // Parse the JSON output from the Python script
-          ocrData = JSON.parse(stdout);
+          ocrData = JSON.parse(stdout.trim());
           console.log("Successfully parsed OCR data");
+          
+          // Check if the result contains an error
+          if (ocrData.error) {
+            console.error("OCR script returned error:", ocrData.error);
+            pythonError = new Error(ocrData.error);
+            ocrData = null;
+          } else {
+            console.log(`Extracted data: ${ocrData.nozzles?.length || 0} nozzles, Date: ${ocrData.printDate || 'N/A'}`);
+          }
         } catch (parseError) {
           console.error("Error parsing OCR output:", parseError);
-          console.log("Raw OCR output:", stdout);
-          throw new Error("Failed to parse OCR output");
+          console.log("Raw OCR output:", stdout.substring(0, 1000));
+          pythonError = new Error("Failed to parse OCR output");
+          ocrData = null;
         }
       } else {
         console.error("No output from Python script");
-        throw new Error("No output from OCR processor");
+        pythonError = new Error("No output from OCR processor");
+        ocrData = null;
       }
     } catch (error: any) {
-      console.error("Error executing OCR script:", error);
-      console.error("Error stack:", error.stack);
+      console.error("Error executing OCR script:", error.message);
+      pythonError = error;
+      ocrData = null;
+    }
 
-      // Try Node-based OCR with tesseract.js only when explicitly enabled
-      if (process.env.USE_NODE_OCR === "true") {
-        try {
-          const Tesseract = (await import("tesseract.js")).default;
-          const { data: { text } } = await Tesseract.recognize(filePath, "eng");
+    // If Python OCR failed, try Node-based OCR fallback (only when explicitly enabled)
+    if (!ocrData && process.env.USE_NODE_OCR === "true") {
+      try {
+        const Tesseract = (await import("tesseract.js")).default;
+        const { data: { text } } = await Tesseract.recognize(filePath, "eng");
 
         // Normalize whitespace and lines
         const normalized = text
@@ -239,6 +263,7 @@ export async function POST(request: Request) {
           }
           if (current) nozzles.push(current);
         }
+        
         // Build OCR data from parsed values
         ocrData = {
           pumpSerialNumber,
@@ -246,28 +271,43 @@ export async function POST(request: Request) {
           model,
           nozzles,
         };
-        } catch (fallbackErr) {
-          console.log("Node OCR fallback failed; proceeding with static fallback");
-          ocrData = null;
-        }
+        console.log("Node OCR fallback succeeded");
+      } catch (fallbackErr) {
+        console.error("Node OCR fallback failed:", fallbackErr);
+        ocrData = null;
       }
-      // If still no OCR data, return minimal structure; for known slip format, provide sane defaults
-      if (!ocrData) {
-        ocrData = { pumpSerialNumber: "", printDate: "", model: "", nozzles: [] };
-        if (filePath.toLowerCase().includes("uploads")) {
-          ocrData = {
-            pumpSerialNumber: "583227",
-            printDate: "22-APR-2025",
-            model: "2422",
-            nozzles: [
-              { nozzle: "1", a: "7709841.690", v: "98656.300", totSales: "71064" },
-              { nozzle: "2", a: "146428768.400", v: "1749654.670", totSales: "133665" },
-              { nozzle: "3", a: "174720023.050", v: "2105157.410", totSales: "145644" },
-              { nozzle: "4", a: "6280158.210", v: "74270.160", totSales: "47422" },
-            ],
-          };
-        }
-      }
+    }
+
+    // If still no OCR data, return error instead of fake data
+    if (!ocrData) {
+      console.error("All OCR methods failed. No data extracted from receipt.");
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Failed to extract data from receipt image. Please ensure the image is clear and readable.",
+          error: "OCR processing failed"
+        },
+        { status: 422 }
+      );
+    }
+
+    // Validate that OCR data contains actual extracted information
+    if (ocrData.error) {
+      console.error("OCR returned error:", ocrData.error);
+      return NextResponse.json(
+        {
+          success: false,
+          message: `OCR processing error: ${ocrData.error}`,
+          error: ocrData.error
+        },
+        { status: 422 }
+      );
+    }
+
+    // Ensure we have at least some data (not empty structure)
+    if (!ocrData.nozzles || ocrData.nozzles.length === 0) {
+      console.warn("OCR completed but no nozzle data extracted");
+      // Still save it but warn the user
     }
 
     console.log("Final OCR data:", JSON.stringify(ocrData, null, 2));
